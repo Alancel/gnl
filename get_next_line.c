@@ -6,7 +6,7 @@
 /*   By: alancel <alancel@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/11/02 14:14:58 by alancel           #+#    #+#             */
-/*   Updated: 2020/11/02 22:31:13 by alancel          ###   ########.fr       */
+/*   Updated: 2020/11/05 19:10:58 by alancel          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,52 +16,96 @@
 #include <unistd.h>
 #include <string.h>
 
-char *check_reminder(char *remainder, char **line)
+int					ft_check_endl(char *str)
 {
-	char *p_n;
+	int				i;
 
-	p_n = NULL;
-	if(remainder)
-		if ((p_n = ft_strchr(remainder, '\n')))
-		{
-			*p_n = '\0';
-			*line = ft_strdup(remainder);
-			ft_strcpy(remainder, ++p_n);
-		}
-		else
-		{
-			*line = ft_strdup(remainder);
-			ft_strclr(remainder);
-		}
-	else
-		*line = ft_strnew(1);
-	return(p_n);
+	i = 0;
+	if (!str)
+		return (0);
+	while (str[i])
+	{
+		if (str[i] == '\n')
+			return (1);
+		i++;
+	}
+	return (0);
 }
 
-int		get_next_line(int fd, char **line)
+char				*ft_remainder_empty(char *remainder)
 {
-	int byte_was_read;
-	char buff[BUFFER_SIZE + 1];
-	char *p_n;
-	static char *reminder;
-	char *tmp;
-	
-	
-	if (fd < 0 || !line || BUFFER_SIZE < 0)
-		return (-1);
-	p_n = check_reminder(reminder, line);
-	while (!p_n &&(byte_was_read = read(fd, buff, BUFFER_SIZE)))
+	char			*str;
+	size_t			i;
+	size_t			j;
+
+	i = 0;
+	j = 0;
+	if (!remainder)
+		return (0);
+	while (remainder[i] && remainder[i] != '\n')
+		i++;
+	if (!remainder[i])
 	{
-		buff[byte_was_read] = '\0';
-		if ((p_n = ft_strchr(buff, '\n')))
-		{
-			*p_n = '\0';
-			p_n++;
-			reminder = ft_strdup(p_n);
-		}
-		tmp = *line;
-		*line = ft_strjoin(*line, buff);
-		free(tmp);
+		free(remainder);
+		return (0);
 	}
-	return(byte_was_read || ft_strlen(*line)) ? 1 : 0;
+	if (!(str = malloc(sizeof(char) * ((ft_strlen(remainder) - i) + 1))))
+		return (0);
+	i++;
+	while (remainder[i])
+		str[j++] = remainder[i++];
+	str[j] = '\0';
+	free(remainder);
+	return (str);
+}
+
+char				*ft_write_line(char *str)
+{
+	int				i;
+	char			*tmp;
+
+	i = 0;
+	if (!str)
+		return (0);
+	while (str[i] && str[i] != '\n')
+		i++;
+	if (!(tmp = malloc(sizeof(char) * (i + 1))))
+		return (0);
+	i = 0;
+	while (str[i] && str[i] != '\n')
+	{
+		tmp[i] = str[i];
+		i++;
+	}
+	tmp[i] = '\0';
+	return (tmp);
+}
+
+int					get_next_line(int fd, char **line)
+{
+	char			*buff;
+	static char		*remainder;
+	int				byte_reader;
+
+	byte_reader = 1;
+	if (fd < 0 || !line || BUFFER_SIZE <= 0)
+		return (-1);
+	if (!(buff = malloc(sizeof(char) * (BUFFER_SIZE + 1))))
+		return (-1);
+	while (!ft_check_endl(remainder) && byte_reader != 0)
+	{
+		if ((byte_reader = read(fd, buff, BUFFER_SIZE)) == -1)
+		{
+			free(buff);
+			return (-1);
+		}
+		buff[byte_reader] = '\0';
+		remainder = ft_str_join(remainder, buff);
+	}
+	free(buff);
+	*line = ft_write_line(remainder);
+	remainder = ft_remainder_empty(remainder);
+	if (byte_reader == 0)
+		return (0);
+	return (1);
 }
